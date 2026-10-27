@@ -39,3 +39,13 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     reason TEXT NOT NULL CHECK (reason IN ('sale', 'restock', 'adjustment')),
     occurred_at TEXT NOT NULL
 ) STRICT;
+
+
+CREATE INDEX IF NOT EXISTS idx_products_supplier_id
+ON products(supplier_id);
+
+CREATE INDEX IF NOT EXISTS idx_sale_items_product_id
+ON sale_items(product_id);
+
+CREATE INDEX IF NOT EXISTS idx_stock_movements_product_id
+ON stock_movements(product_id);
