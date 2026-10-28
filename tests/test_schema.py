@@ -2,6 +2,8 @@ import sqlite3
 from contextlib import closing
 from pathlib import Path
 
+from seed_db import connect, seed_data
+
 
 def test_schema_creates_required_tables():
     schema_path = Path(__file__).resolve().parents[1] / "schema.sql"
@@ -25,3 +27,19 @@ def test_schema_creates_required_tables():
     }
     missing_tables = required_tables - actual_tables
     assert not missing_tables, f"Missing tables: {sorted(missing_tables)}"
+
+
+def test_seed_creates_four_suppliers():
+    schema_path = Path(__file__).resolve().parents[1] / "schema.sql"
+    connection = connect(":memory:")
+
+    try:
+        connection.executescript(schema_path.read_text(encoding="utf-8"))
+
+        seed_data(connection)
+
+        row = connection.execute("SELECT COUNT(*) AS total FROM suppliers").fetchone()
+
+        assert row["total"] == 4
+    finally:
+        connection.close()
