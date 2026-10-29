@@ -14,15 +14,20 @@ def get_product(connection, product_id):
 
     return row
 
+
 def add_product(connection, sku, name, category, supplier, price, quantity, reorder):
-    row = connection.execute("SELECT id FROM suppliers WHERE name = ?", (supplier,)).fetchone()
+    row = connection.execute(
+        "SELECT id FROM suppliers WHERE name = ?", (supplier,)
+    ).fetchone()
     if row is None:
         raise ValueError(f"Supplier not found: {supplier}")
 
     supplier_id = row["id"]
 
     sql = "INSERT INTO products (sku, name, category, supplier_id, unit_price, quantity, reorder_level) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    cursor = connection.execute(sql, (sku, name, category, supplier_id, price, quantity, reorder))
+    cursor = connection.execute(
+        sql, (sku, name, category, supplier_id, price, quantity, reorder)
+    )
     connection.commit()
 
     return cursor.lastrowid
@@ -43,7 +48,9 @@ def update_product(connection, product_id, update_field, new_value):
 
 
 def delete_product(connection, product_id):
-    rows = connection.execute("SELECT * FROM sale_items WHERE product_id = ?", (product_id,)).fetchone()
+    rows = connection.execute(
+        "SELECT * FROM sale_items WHERE product_id = ?", (product_id,)
+    ).fetchone()
 
     if rows is None:
         cursor = connection.execute("DELETE FROM products WHERE id = ?", (product_id,))
@@ -51,6 +58,7 @@ def delete_product(connection, product_id):
         return cursor.rowcount == 1
     else:
         return False
+
 
 def search_products(
     connection,

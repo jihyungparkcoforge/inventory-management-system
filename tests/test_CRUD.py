@@ -13,9 +13,13 @@ def test_add_new_product():
 
         seed_data(connection)
 
-        add_product(connection, "TL-999", "Test tool","Tools", "Atlas Tools", 9999, 99, 9)
+        add_product(
+            connection, "TL-999", "Test tool", "Tools", "Atlas Tools", 9999, 99, 9
+        )
 
-        row = connection.execute("SELECT * FROM products WHERE name = 'Test tool'").fetchone()
+        row = connection.execute(
+            "SELECT * FROM products WHERE name = 'Test tool'"
+        ).fetchone()
 
         assert row["sku"] == "TL-999"
     finally:
@@ -30,7 +34,9 @@ def test_search_product():
         connection.executescript(schema_path.read_text(encoding="utf-8"))
 
         seed_data(connection)
-        add_product(connection, "TL-999", "Test tool","Tools", "Atlas Tools", 9999, 99, 9)
+        add_product(
+            connection, "TL-999", "Test tool", "Tools", "Atlas Tools", 9999, 99, 9
+        )
 
         row1 = search_products(connection, sku="TL-999")
         row2 = search_products(connection, name="Test tool")
@@ -39,13 +45,12 @@ def test_search_product():
         assert len(row1) == 1
         assert row1[0]["sku"] == "TL-999"
 
-        assert {row["id"] for row in row1} == {
-            row["id"] for row in row2
-        }
+        assert {row["id"] for row in row1} == {row["id"] for row in row2}
 
         assert row3 == []
     finally:
         connection.close()
+
 
 def test_search_product_incomplete_argument():
     schema_path = Path(__file__).resolve().parents[1] / "schema.sql"
@@ -55,7 +60,9 @@ def test_search_product_incomplete_argument():
         connection.executescript(schema_path.read_text(encoding="utf-8"))
 
         seed_data(connection)
-        add_product(connection, "TL-999", "Test tool","Tools", "Atlas Tools", 9999, 99, 9)
+        add_product(
+            connection, "TL-999", "Test tool", "Tools", "Atlas Tools", 9999, 99, 9
+        )
 
         row1 = search_products(connection, sku="TL-99")
         row1_comp = search_products(connection, sku="TL-999")
@@ -66,12 +73,12 @@ def test_search_product_incomplete_argument():
         row3 = search_products(connection, supplier_name="atl")
         row3_comp = search_products(connection, supplier_name="Atlas Tools")
 
-
         assert row1 == row1_comp
         assert row2 == row2_comp
         assert row3 == row3_comp
     finally:
         connection.close()
+
 
 def test_update_product():
     schema_path = Path(__file__).resolve().parents[1] / "schema.sql"
@@ -100,13 +107,20 @@ def test_delete_product():
         seed_data(connection)
 
         delete_saled = delete_product(connection, 1)
-        row_block_delete = connection.execute("SELECT * FROM products WHERE id = 1").fetchone()
+        row_block_delete = connection.execute(
+            "SELECT * FROM products WHERE id = 1"
+        ).fetchone()
 
-        add_product(connection, "TL-999", "Test tool","Tools", "Atlas Tools", 9999, 99, 9)
-        search_row = connection.execute("SELECT * FROM products WHERE sku = 'TL-999'").fetchone()
+        add_product(
+            connection, "TL-999", "Test tool", "Tools", "Atlas Tools", 9999, 99, 9
+        )
+        search_row = connection.execute(
+            "SELECT * FROM products WHERE sku = 'TL-999'"
+        ).fetchone()
         delete_new = delete_product(connection, search_row["id"])
-        row_after = connection.execute("SELECT * FROM products WHERE sku = 'TL-999'").fetchone()
-
+        row_after = connection.execute(
+            "SELECT * FROM products WHERE sku = 'TL-999'"
+        ).fetchone()
 
         assert not delete_saled and row_block_delete["name"] != None
         assert delete_new and row_after == None
