@@ -1,10 +1,7 @@
-import sqlite3
-from contextlib import closing
 from pathlib import Path
 
-from seed_db import connect, seed_data
 from product import add_product, delete_product, search_products, update_product
-
+from seed_db import connect, seed_data
 
 
 def test_add_new_product():
