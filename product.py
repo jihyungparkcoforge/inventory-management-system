@@ -16,34 +16,49 @@ def get_product(connection, product_id):
 
 
 def add_product(connection, sku, name, category, supplier, price, quantity, reorder):
-    row = connection.execute(
-        "SELECT id FROM suppliers WHERE name = ?", (supplier,)
-    ).fetchone()
-    if row is None:
-        raise ValueError(f"Supplier not found: {supplier}")
+    with connection:
+        row = connection.execute(
+            "SELECT id FROM suppliers WHERE name = ?", (supplier,)
+        ).fetchone()
+        if row is None:
+            supplier_cursor = connection.execute(
+                "INSERT INTO suppliers (name) VALUES (?)", (supplier,)
+            )
+            supplier_id = supplier_cursor.lastrowid
+        else:
+            supplier_id = row["id"]
 
-    supplier_id = row["id"]
-
-    sql = "INSERT INTO products (sku, name, category, supplier_id, unit_price, quantity, reorder_level) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    cursor = connection.execute(
-        sql, (sku, name, category, supplier_id, price, quantity, reorder)
-    )
-    connection.commit()
+        sql = "INSERT INTO products (sku, name, category, supplier_id, unit_price, quantity, reorder_level) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        cursor = connection.execute(
+            sql, (sku, name, category, supplier_id, price, quantity, reorder)
+        )
 
     return cursor.lastrowid
 
 
 def update_product(connection, product_id, update_field, new_value):
-    allowed_columns = {"id", "sku", "name", "category", "supplier_id"}
+    allowed_columns = {
+        "sku",
+        "name",
+        "category",
+        "supplier_id",
+        "reorder_level",
+        "unit_price",
+    }
 
     if update_field not in allowed_columns:
-        raise ValueError(f"Invalid search column: {update_field}")
+        raise ValueError(
+            f"Invalid update field: {update_field}. Use Adjust for stock changes."
+        )
 
-    cursor = connection.execute(
-        f"UPDATE products SET {update_field} = ? WHERE id = ?",
-        (new_value, product_id),
-    )
-    connection.commit()
+    if update_field in ["supplier_id", "reorder_level", "unit_price"]:
+        new_value = int(new_value)
+
+    with connection:
+        cursor = connection.execute(
+            f"UPDATE products SET {update_field} = ? WHERE id = ?",
+            (new_value, product_id),
+        )
     return cursor.rowcount == 1
 
 
@@ -53,8 +68,10 @@ def delete_product(connection, product_id):
     ).fetchone()
 
     if rows is None:
-        cursor = connection.execute("DELETE FROM products WHERE id = ?", (product_id,))
-        connection.commit()
+        with connection:
+            cursor = connection.execute(
+                "DELETE FROM products WHERE id = ?", (product_id,)
+            )
         return cursor.rowcount == 1
     else:
         return False
@@ -86,8 +103,8 @@ def search_products(
         params.append(f"%{supplier_name}%")
 
     if category is not None:
-        conditions.append("p.category = ?")
-        params.append(category)
+        conditions.append("p.category LIKE ?")
+        params.append(f"%{category}%")
 
     if max_price is not None:
         conditions.append("p.unit_price <= ?")
