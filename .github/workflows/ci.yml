@@ -36,3 +36,17 @@ jobs:
 
       - name: Run tests
         run: uv run --no-sync pytest
+
+  docker-build:
+      name: Docker build and tests
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v7
+
+        - name: Build Docker image
+          run: docker build -t inventory-ci .
+
+        - name: Run tests inside container
+          run: docker run --rm inventory-ci python -m pytest -q

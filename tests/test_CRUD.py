@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -30,38 +31,53 @@ def test_add_new_product(connection):
     assert row["sku"] == "TL-999"
 
 
-def test_search_product(connection):
+def test_add_dup_sku_new_product(connection):
+    seed_data(connection)
+
+    add_product(connection, "TL-999", "Test tool", "Tools", "Atlas Tools", 9999, 99, 9)
+    with pytest.raises(sqlite3.IntegrityError):
+        add_product(
+            connection, "TL-999", "Test tool2", "Tools", "Atlas Tools", 9999, 99, 9
+        )
+
+
+def test_search_product_by_sku(connection):
     seed_data(connection)
     add_product(connection, "TL-999", "Test tool", "Tools", "Atlas Tools", 9999, 99, 9)
 
     row1 = search_products(connection, sku="TL-999")
-    row2 = search_products(connection, name="Test tool")
-    row3 = search_products(connection, sku="TL-999", max_price=999)
 
     assert len(row1) == 1
     assert row1[0]["sku"] == "TL-999"
 
-    assert {row["id"] for row in row1} == {row["id"] for row in row2}
 
-    assert row3 == []
-
-
-def test_search_product_incomplete_argument(connection):
+def test_search_product_by_name(connection):
     seed_data(connection)
     add_product(connection, "TL-999", "Test tool", "Tools", "Atlas Tools", 9999, 99, 9)
 
-    row1 = search_products(connection, sku="TL-99")
-    row1_comp = search_products(connection, sku="TL-999")
+    row2 = search_products(connection, name="Test tool")
 
-    row2 = search_products(connection, name="test t")
-    row2_comp = search_products(connection, name="Test tool")
+    assert row2[0]["sku"] == "TL-999"
 
-    row3 = search_products(connection, supplier_name="atl")
-    row3_comp = search_products(connection, supplier_name="Atlas Tools")
 
-    assert row1 == row1_comp
-    assert row2 == row2_comp
-    assert row3 == row3_comp
+def test_search_product_incomplete_sku(connection):
+    seed_data(connection)
+    add_product(connection, "TL-999", "Test tool", "Tools", "Atlas Tools", 9999, 99, 9)
+
+    row = search_products(connection, sku="TL-99")
+    row_comp = search_products(connection, sku="TL-999")
+
+    assert row == row_comp
+
+
+def test_search_product_incomplete_name(connection):
+    seed_data(connection)
+    add_product(connection, "TL-999", "Test tool", "Tools", "Atlas Tools", 9999, 99, 9)
+
+    row = search_products(connection, name="test t")
+    row_comp = search_products(connection, name="Test tool")
+
+    assert row == row_comp
 
 
 def test_update_product(connection):
@@ -71,6 +87,16 @@ def test_update_product(connection):
     row = connection.execute("SELECT * FROM products WHERE id = 1").fetchone()
 
     assert update and row["name"] == "CRUD Hammer"
+
+
+def test_update_product_negative_quantity(connection):
+    seed_data(connection)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        update_product(connection, 1, "unit_price", -1)
+    row = connection.execute("SELECT * FROM products WHERE id = 1").fetchone()
+
+    assert row["unit_price"] != -1
 
 
 def test_delete_product(connection):

@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -101,8 +102,8 @@ def seed_data(connection):
             )
 
 
-def main():
-    db_path = PROJECT_ROOT / "data" / "inventory.db"
+def make_seed_db():
+    db_path = Path(os.environ.get("INVENTORY_DB", str(PROJECT_ROOT / "inventory.db")))
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -120,7 +121,3 @@ def main():
     except (OSError, sqlite3.Error) as error:
         print(f"Database initialization failed: {error}", file=sys.stderr)
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
