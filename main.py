@@ -40,6 +40,7 @@ def main():
     low_stock_rows = low_stock(con)
 
     print("*** Low Stock Alert!! ***")
+    print(f"Low-stock products: {len(low_stock_rows)}")
     for row in low_stock_rows:
         print(dict(row))
     print("-------------------------\n")
