@@ -65,3 +65,8 @@ The following checks were completed:
 - Backup contents: All five tables had the same row counts and contents as the source database.
 - Failed sale rollback: Tests confirmed that insufficient stock or an unknown product leaves stock unchanged and creates no sale, sale item, or stock movement records.
 - Previous sales: Tests confirmed that a failed sale does not change previously committed sales or movements.
+
+
+## 1.1.0 update
+
+When the menu starts, it shows a banner with the number of low stock products.
