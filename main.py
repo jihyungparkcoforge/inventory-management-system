@@ -1,6 +1,5 @@
 import os
 import sqlite3
-import sys
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +18,14 @@ from transaction import adjust, record_sales, restock
 PROJECT_ROOT = Path(__file__).resolve().parents[0]
 
 
+def print_row(row):
+    data = dict(row)
+    for field in ("unit_price", "revenue", "stock_value"):
+        if field in data:
+            data[field] = f"{data[field] / 100:.2f}"
+    print(data)
+
+
 def main():
     db_path = Path(os.environ.get("INVENTORY_DB", str(PROJECT_ROOT / "inventory.db")))
     backup_folder = db_path.parent / "backups"
@@ -26,10 +33,8 @@ def main():
 
     if not db_path.exists():
         make_seed_db()
-
-    con = connect(str(db_path))
-
-    print("""
+    with closing(connect(str(db_path))) as con:
+        print("""
 
 -------------------------------------------------
 |    Hello from inventory-management-system!    |
@@ -37,34 +42,33 @@ def main():
 
 """)
 
-    low_stock_rows = low_stock(con)
+        low_stock_rows = low_stock(con)
 
-    print("*** Low Stock Alert!! ***")
-    print(f"Low-stock products: {len(low_stock_rows)}")
-    for row in low_stock_rows:
-        print(dict(row))
-    print("-------------------------\n")
+        print("*** Low Stock Alert!! ***")
+        print(f"Low-stock products: {len(low_stock_rows)}")
+        for row in low_stock_rows:
+            print_row(row)
+        print("-------------------------\n")
 
-    while True:
-        i = input(
-            "Menu:\n1. Transaction\n2. Manage Product\n3. Get Report\n4. Backup Database\n5. Exit\n"
-        )
-        if i not in ["1", "2", "3", "4", "5"]:
-            print("Please choose from 1,2,3,4, or 5")
-            continue
+        while True:
+            i = input(
+                "Menu:\n1. Transaction\n2. Manage Product\n3. Get Report\n4. Backup Database\n5. Exit\n"
+            )
+            if i not in ["1", "2", "3", "4", "5"]:
+                print("Please choose from 1,2,3,4, or 5")
+                continue
 
-        menu = {"1": transaction, "2": manage_product, "3": get_report}
-        if i == "4":
-            try:
-                print("backup made in :", backup_database(db_path, backup_folder))
-            except (OSError, sqlite3.Error) as e:
-                print(e)
-            continue
-        elif i == "5":
-            con.close()
-            sys.exit(0)
+            menu = {"1": transaction, "2": manage_product, "3": get_report}
+            if i == "4":
+                try:
+                    print("backup made in :", backup_database(db_path, backup_folder))
+                except (OSError, sqlite3.Error) as e:
+                    print(e)
+                continue
+            elif i == "5":
+                return
 
-        menu[i](con)
+            menu[i](con)
 
 
 def transaction(con):
@@ -163,14 +167,14 @@ def manage_product(con):
         try:
             row = get_product(con, int(id))
             if row:
-                print(dict(row))
+                print_row(row)
             else:
                 print("Invalid input")
         except ValueError:
             print("Invalid input")
     if option == "2":
         data = input(
-            "Please provide product sku, name, category, supplier (if new, new supplier will be added), unit price, quantity, and reorder level. (separate with comma)\n"
+            "Please provide product sku, name, category, existing supplier, unit price in cents, quantity, and reorder level. (separate with comma)\n"
         )
         try:
             sku, name, category, supplier, price, quantity, reorder = [
@@ -284,7 +288,7 @@ def manage_product(con):
                 print("No products found.")
             else:
                 for row in rows:
-                    print(dict(row))
+                    print_row(row)
     else:
         return
 
@@ -304,7 +308,7 @@ def get_report(con):
 
     rows = func[option](con)
     for row in rows:
-        print(dict(row))
+        print_row(row)
 
 
 def backup_database(source_path, backup_folder):
@@ -320,8 +324,8 @@ def backup_database(source_path, backup_folder):
     backup_path = backup_folder / f"inventory-{timestamp}.db"
 
     with (
-        closing(sqlite3.connect(source_path)) as source,
-        closing(sqlite3.connect(backup_path)) as destination,
+        closing(connect(str(source_path))) as source,
+        closing(connect(str(backup_path))) as destination,
     ):
         source.backup(destination)
 

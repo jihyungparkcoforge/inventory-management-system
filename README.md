@@ -140,6 +140,7 @@ The following products have no matching rows in `sale_items`:
 - Product 11: Wall Anchors Pack
 - Product 12: Hex Nuts Pack
 
+
 ## Self-review
 
 The most difficult part was understanding transactions. At first, I checked
@@ -152,3 +153,73 @@ The current test suite contains 23 passing tests. It covers several normal
 and invalid cases, but the CLI and backup workflows still rely partly on
 manual checks. Further improvements would include clearer input messages,
 more backup tests, and simpler shared database setup code.
+
+
+## Actual Running Output
+
+### Docker Build Output
+
+Command: `docker build --progress=plain -t inventory-manage:verification .`
+
+Relevant output:
+
+```
+#8 [4/6] RUN pip install --no-cache-dir -r requirements.txt
+#8 CACHED
+#9 [5/6] COPY . .
+#9 DONE 0.0s
+#10 [6/6] RUN mkdir -p /data
+#10 DONE 0.4s
+#11 naming to docker.io/library/inventory-manage:verification done
+#11 unpacking to docker.io/library/inventory-manage:verification 0.0s done
+#11 DONE 0.1s
+```
+
+### Container Persistence Output
+
+Two separate containers used the same temporary Docker volume. In the first container, Product 1 was restocked by 5 units.
+
+```
+Restock successfully saved!
+```
+
+The first container was removed. Looking up Product 1 in the new container returned:
+
+```
+{'id': 1, 'sku': 'TL-001', 'name': 'Claw Hammer', 'category': 'Tools', 'supplier_id': 1, 'unit_price': 1599, 'quantity': 23, 'reorder_level': 5, 'supplier_name': 'Atlas Tools'}
+```
+
+### Failed Sale Output
+
+This check used a fresh, temporary database. Product 1 had enough stock for the first line, but Product 3 had only 3 units and could not supply the requested 4.
+
+```
+Before:
+Product quantities: [(1, 18), (3, 3)]
+sales: 5
+sale_items: 12
+stock_movements: 0
+
+record_sales(source, [(1, 1), (3, 4)]) -> False
+
+After:
+Product quantities: [(1, 18), (3, 3)]
+sales: 5
+sale_items: 12
+stock_movements: 0
+```
+
+The function returned `False`. Both products kept their original quantities, and the table counts were unchanged.
+
+### Backup Check Output
+
+A backup was created from the temporary database after the failed sale check.
+
+```
+Backup integrity: ok
+suppliers: source=4, backup=4
+products: source=12, backup=12
+sales: source=5, backup=5
+sale_items: source=12, backup=12
+stock_movements: source=0, backup=0
+```

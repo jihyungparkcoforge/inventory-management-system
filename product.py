@@ -21,10 +21,7 @@ def add_product(connection, sku, name, category, supplier, price, quantity, reor
             "SELECT id FROM suppliers WHERE name = ?", (supplier,)
         ).fetchone()
         if row is None:
-            supplier_cursor = connection.execute(
-                "INSERT INTO suppliers (name) VALUES (?)", (supplier,)
-            )
-            supplier_id = supplier_cursor.lastrowid
+            return False
         else:
             supplier_id = row["id"]
 

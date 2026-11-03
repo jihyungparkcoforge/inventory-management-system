@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import sys
+from contextlib import closing
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[0]
@@ -104,20 +105,33 @@ def seed_data(connection):
 
 def make_seed_db():
     db_path = Path(os.environ.get("INVENTORY_DB", str(PROJECT_ROOT / "inventory.db")))
-    db_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        con = connect(str(db_path))
+        db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        try:
+        with closing(connect(str(db_path))) as con:
             schema_excutor(con, "schema.sql")
             print("Database tables ready")
 
             seed_data(con)
             print("Seed data inserted successfully")
-        finally:
-            con.close()
+
+            tables = (
+                "suppliers",
+                "products",
+                "sales",
+                "sale_items",
+                "stock_movements",
+            )
+
+            for table in tables:
+                count = con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                print(f"{table}: {count}")
 
     except (OSError, sqlite3.Error) as error:
         print(f"Database initialization failed: {error}", file=sys.stderr)
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    make_seed_db()
