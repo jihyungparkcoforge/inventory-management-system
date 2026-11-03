@@ -47,21 +47,40 @@ Combination of sale_id and product_id is used for primary key.
 |X|id|product_id|quantity_change|reason|occurred_at|
 |---|---|---|---|---|---|
 |**meaning**|change id|product id|quantity of change|reason of change (i.e., sold, restock)|when change heppend|
-|**Note**| primary key | foreign_id (products) | required, integer | required, choice [sold, restock, adjustment] | required, date |
+|**Note**| primary key | foreign_id (products) | required, integer | required, choice [sale, restock, adjustment] | required, date |
 
 
 
 ## Core public functions
 
-|function name| description|
-|---|---|
-|add_new_item|add new item in a products table|
-|update_item|search and modify exist item|
-|remove_item|search and remove exist item|
-|search_item|search and show information exist item|
-|stock_value_by_supplier|list of stock value by supplier|
-|low_stock_report|report restock level items|
-|record_sale|shows sale history|
+| Function | Inputs | Returns / behavior |
+|---|---|---|
+| `connect` | database path | Connection with foreign keys on and named rows |
+| `schema_excutor` | connection, schema path | `None`; creates the tables |
+| `insert_rows` | connection, fixed table name, columns, rows | `None`; inserts rows without committing |
+| `seed_data` | connection | `None`; inserts and commits sample data |
+| `make_seed_db` | none; reads `INVENTORY_DB` | `None`; creates and seeds the database, prints row counts |
+| `add_product` | connection, SKU, name, category, supplier name, price, quantity, reorder level | New product ID, or `False` for an unknown supplier |
+| `get_product` | connection, product ID | Row including supplier name; raises `ValueError` if missing |
+| `update_product` | connection, product ID, field, new value | `True` if updated, `False` if missing |
+| `delete_product` | connection, product ID | `True` if deleted, `False` if missing or already sold; foreign key errors prevent deleting movement history |
+| `search_products` | connection; optional SKU, name, supplier name, category, max price, in-stock and low-stock filters | Matching rows sorted by name |
+| `stock_value` | connection | Supplier rows with stock value, highest value first |
+| `low_stock` | connection | Products at or below reorder level, including units short |
+| `sales_by_product` | connection | Product rows with units sold and revenue, highest revenue first |
+| `never_sold` | connection | Products with no sale items |
+| `restock` | connection, product ID, positive amount, optional time | `True` on success, `False` for invalid amount or missing product |
+| `adjust` | connection, product ID, signed amount, optional time | `True` on success, `False` for invalid input, missing product, or negative final stock |
+| `record_sales` | connection, product/quantity pairs, optional time | `True` on success, `False` for invalid items, unknown products, or insufficient stock |
+| `backup_database` | source database path, backup folder | Path to the backup file |
+| `print_row` | one row | `None`; prints money with two decimals |
+| `main` | none; reads `INVENTORY_DB` and menu input | `None`; runs the menu and closes its connection on exit |
+| `transaction` | connection; reads menu input | `None`; handles restock, adjustment, or sale |
+| `manage_product` | connection; reads menu input | `None`; handles product lookup, CRUD, and search |
+| `get_report` | connection; reads menu input | `None`; prints the selected report |
+
+Prices are stored as integer cents. Database constraint errors propagate to the menu.
+Stock changes use the current time when no time is supplied.
 
 ## Transaction plan
 
@@ -147,7 +166,7 @@ After verifying the features and data persistence with a Docker volume,
 create Git tag `v1.0.0` and Docker image tag `1.0.0`.
 Add an entry to `CHANGELOG.md`.
 
-### Version 1.1.0`
+### Version 1.1.0
 
 Use `feature/low-stock-banner` for the sixth pull request.
 Add a banner showing the number of low stock products when the menu starts.
